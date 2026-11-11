@@ -23,7 +23,7 @@ body{background:radial-gradient(ellipse at 50% 0,var(--bg2),var(--bg) 70%);color
 @keyframes pop{from{opacity:0;transform:scale(.8) translateY(10px)}}
 .p{background:var(--surf);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border-top:4px solid var(--c);min-width:0;transition:transform .2s,box-shadow .2s}
 .p.m{--c:var(--m)}.p.f{--c:var(--f)}
-.unit:hover .p{transform:translateY(-3px)}
+@media (hover:hover){.unit:hover .p{transform:translateY(-3px)}}
 .unit.sel .p{box-shadow:0 0 0 2px var(--gold),0 10px 28px rgba(201,138,18,.35)}
 .av{width:38px;height:38px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font:700 17px var(--serif);margin-top:-2px}
 .dead .av{filter:saturate(.35)}
@@ -58,7 +58,28 @@ input,select{font:400 14.5px var(--sans);color:var(--ink);background:var(--bg);b
 .ghost{border:1px solid var(--line);height:40px}
 .danger{color:#c0392b;border:1px solid currentColor;height:40px}
 .hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:var(--surf);color:var(--mute);font-size:13px;padding:8px 14px;border-radius:99px;box-shadow:var(--shadow);z-index:4;white-space:nowrap}
-@media (max-width:700px){#panel{right:0;left:0;top:auto;bottom:0;width:auto;max-height:62%;border-radius:20px 20px 0 0;transform:translateY(110%)}.hint{display:none}.tools button{min-width:34px;padding:0 8px}}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#stage{user-select:none;-webkit-user-select:none}
+.tools{position:relative}
+.menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--surf);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;flex-direction:column;min-width:176px}
+.menu.open{display:flex}
+.menu button{text-align:left;height:42px;white-space:nowrap}
+@media (max-width:700px){
+header{padding:12px 16px}
+h1{font-size:21px}
+.tools{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:none;flex-wrap:nowrap;padding:6px;gap:2px;border-radius:20px}
+.tools>button{min-width:48px;height:48px;font-size:18px;padding:0 10px}
+#fit{font-size:14px}
+.menu{top:auto;bottom:calc(100% + 10px)}
+.menu button{font-size:15px;height:48px}
+#panel{right:0;left:0;top:auto;bottom:0;width:auto;max-height:66%;border-radius:22px 22px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(110%)}
+#panel::before{content:"";display:block;width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 10px}
+input,select{font-size:16px;padding:10px 12px}
+.btn,.ghost,.danger{height:46px}
+.phr .ghost{height:40px}
+.hint{display:none}
+.toast{bottom:calc(92px + env(safe-area-inset-bottom,0px));max-width:88vw;text-align:center}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.a .lines path{stroke-dasharray:none}}
 </style>
 </head>
@@ -73,11 +94,14 @@ input,select{font:400 14.5px var(--sans);color:var(--ink);background:var(--bg);b
     <button id="zout" title="Жижигрүүлэх" aria-label="Жижигрүүлэх">－</button>
     <button id="fit" title="Бүгдийг харуулах">Бүгд</button>
     <button id="theme" title="Өнгө солих" aria-label="Өнгө солих">◐</button>
+    <button id="more" title="Бусад" aria-label="Бусад цэс" aria-expanded="false">⋯</button>
+    <div class="menu" id="menu">
     <button id="bak" title="Модыг JSON файлаар нөөцлөх">Нөөцлөх</button>
     <button id="imp" title="Нөөцөлсөн JSON файлыг оруулах">Оруулах</button>
     <button id="png" title="Зургаар татах">PNG</button>
     <input type="file" id="rfile" accept=".json,application/json" hidden>
     <button id="reset" title="Жишиг мод руу буцах">Шинэчлэх</button>
+    </div>
   </div>
 </header>
 <div id="wrap"><div id="stage"></div></div>
@@ -125,7 +149,12 @@ function render(){
   $('#stats').textContent=`${count} хүн · ${gens} үе`;
 }
 const apply=()=>stage.style.transform=`translate(${tx}px,${ty}px) scale(${s})`;
-function fit(){const W=wrap.clientWidth,H=wrap.clientHeight;s=Math.min(1,(W-60)/root.w,(H-190)/root.H);s=Math.max(.25,s);tx=(W-root.w*s)/2;ty=110;apply()}
+const mob=()=>matchMedia('(max-width:700px)').matches;
+function glide(){stage.style.transition='transform .45s cubic-bezier(.2,.8,.3,1)';clearTimeout(glide.t);glide.t=setTimeout(()=>stage.style.transition='',500)}
+function fit(full){const W=wrap.clientWidth,H=wrap.clientHeight,m=mob(),all=Math.min(1,(W-(m?24:60))/root.w,(H-190)/root.H);
+  if(m&&full!==true){s=Math.min(.7,Math.max(all,.55));tx=W/2-root.x*s;ty=88}
+  else{s=Math.max(m?.15:.25,all);tx=(W-root.w*s)/2;ty=m?90:110}
+  glide();apply()}
 function zoomAt(f,px,py){const ns=Math.min(2.2,Math.max(.2,s*f));tx=px-(px-tx)*ns/s;ty=py-(py-ty)*ns/s;s=ns;apply()}
 wrap.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
 let drag=null;const pts=new Map();let pinch=0;
@@ -153,6 +182,7 @@ function select(id){
     <button class="ghost" id="sp">${n.sp?'Ханийг хасах':'＋ Хань нэмэх'}</button>
     ${par?'<button class="danger" id="del">Устгах</button>':''}</div>`;
   panel.classList.add('open');
+  if(mob()){const W=wrap.clientWidth,H=wrap.clientHeight;s=Math.max(s,.6);tx=W/2-n.x*s;ty=Math.max(130,H*.22)-(n.y+UH/2)*s;glide();apply()}
   panel.querySelectorAll('[data-f]').forEach(el=>el.addEventListener('input',()=>{
     const k=el.closest('fieldset').dataset.k,p=k==='n'?n:n.sp;p[el.dataset.f]=el.value;
     if(el.dataset.f==='g')el.closest('fieldset').style.setProperty('--c',`var(--${el.value})`);
@@ -200,15 +230,19 @@ $('#png').onclick=async()=>{
     if(n.sp){await draw(n,l,t,130);await draw(n.sp,l+134,t,130);const mx=l+132,my=t+UH/2;x.beginPath();x.arc(mx,my,12,0,7);x.fillStyle=v('--surf');x.fill();x.lineWidth=2;x.strokeStyle=v('--gold');x.stroke();x.fillStyle=v('--gold');x.font='13px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('♥',mx,my+1);x.textAlign='left';x.textBaseline='alphabetic'}
     else await draw(n,l,t,140)}
   const b=await new Promise(r=>c.toBlob(r,'image/png'));if(b)saveFile('ugiin-mod.png',b);else toast('Зураг үүсгэж чадсангүй')};
+const menu=$('#menu'),more=$('#more'),setMenu=o=>{menu.classList.toggle('open',o);more.setAttribute('aria-expanded',o)};
+more.onclick=()=>setMenu(!menu.classList.contains('open'));
+menu.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.id!=='reset')setMenu(false)});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.tools'))setMenu(false)});
 $('#zin').onclick=()=>zoomAt(1.25,wrap.clientWidth/2,wrap.clientHeight/2);
 $('#zout').onclick=()=>zoomAt(.8,wrap.clientWidth/2,wrap.clientHeight/2);
-$('#fit').onclick=fit;
+$('#fit').onclick=()=>fit(true);
 $('#reset').onclick=function(){if(this.dataset.ok){root=seed();close();animate=true;render();fit();save();this.dataset.ok='';this.textContent='Шинэчлэх'}else{this.dataset.ok=1;this.textContent='Баталгаажуулах?';setTimeout(()=>{this.dataset.ok='';this.textContent='Шинэчлэх'},3000)}};
 $('#theme').onclick=()=>{const r=document.documentElement,dark=getComputedStyle(r).colorScheme.includes('dark');r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('ugiin-theme',r.dataset.theme)}catch(e){}};
 try{const t=localStorage.getItem('ugiin-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 $('#title').addEventListener('input',save);
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur()}});
-addEventListener('resize',()=>{if(!sel)fit()});
+let lw=innerWidth;addEventListener('resize',()=>{if(innerWidth!==lw){lw=innerWidth;if(!sel)fit()}});
 render();fit();setTimeout(()=>{$('#hint').style.opacity=0;$('#hint').style.transition='opacity 1s'},7000);
 </script>
 </body>
